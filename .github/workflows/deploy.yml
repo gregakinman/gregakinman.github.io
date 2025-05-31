@@ -18,9 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Install Node first (caches work better)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20          # any LTS you like
+          cache: 'pnpm'
+      # Install the exact pnpm version declared in package.json
       - uses: pnpm/action-setup@v4
-        with: { version: 9 }
-      - run: pnpm install --frozen-lockfile
+        with:
+          run_install: true         # runs 'pnpm install' for you
       - run: pnpm run build        # → dist/
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
