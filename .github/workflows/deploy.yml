@@ -1,42 +1,39 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches: [main]
 
 permissions:
   contents: read
-  pages: write       # allow the deploy step
-  id-token: write    # for OpenID Connect with Pages
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
+  pages: write
+  id-token: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # 1 · Check out code
       - uses: actions/checkout@v4
-      # Install Node first (caches work better)
+
+      # 2 · Install pnpm (adds it to PATH)
+      - uses: pnpm/action-setup@v4          # docs: https://github.com/pnpm/action-setup
+        with:
+          version: 9.15.0                  # pick the exact you want
+          run_install: false               # we’ll run it explicitly
+
+      # 3 · Install Node *after* pnpm so caching works
       - uses: actions/setup-node@v4
         with:
-          node-version: 20          # any LTS you like
-          cache: 'pnpm'
-      # Install the exact pnpm version declared in package.json
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: true         # runs 'pnpm install' for you
-      - run: pnpm run build        # → dist/
+          node-version: '20'               # any LTS you like
+          cache: 'pnpm'                    # will now find pnpm just fine
+
+      # 4 · Install deps & build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build                # Vite outputs to dist/
+
+      # 5 · Upload & deploy to Pages
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
+        id: deploy
