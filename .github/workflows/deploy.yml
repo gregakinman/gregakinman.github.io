@@ -1,38 +1,40 @@
+# .github/workflows/deploy.yml
 name: Deploy to GitHub Pages
+
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: read          # checkout
+  pages: write            # let us publish
+  id-token: write         # OIDC for deploy-pages
 
 jobs:
-  build-and-deploy:
+  # 1 ── Build the static site and upload it as an artifact
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      # 1 · Check out code
       - uses: actions/checkout@v4
 
-      # 2 · Install pnpm (adds it to PATH)
-      - uses: pnpm/action-setup@v4          # docs: https://github.com/pnpm/action-setup
-        with:
-          run_install: false               # we’ll run it explicitly
+      # install pnpm (version read from package.json)
+      - uses: pnpm/action-setup@v4
+        with: { run_install: true }
 
-      # 3 · Install Node *after* pnpm so caching works
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'               # any LTS you like
-          cache: 'pnpm'                    # will now find pnpm just fine
+      - run: pnpm run build          # vite build -> dist/
 
-      # 4 · Install deps & build
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build                # Vite outputs to dist/
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with: { path: dist }         # path to built files
 
-      # 5 · Upload & deploy to Pages
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: dist }
-      - uses: actions/deploy-pages@v4
-        id: deploy
+  # 2 ── Deploy the artifact to GitHub Pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages            # ← mandatory
+      url:  ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
