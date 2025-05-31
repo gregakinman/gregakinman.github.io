@@ -19,7 +19,6 @@ jobs:
       # 2 · Install pnpm (adds it to PATH)
       - uses: pnpm/action-setup@v4          # docs: https://github.com/pnpm/action-setup
         with:
-          version: 9.15.0                  # pick the exact you want
           run_install: false               # we’ll run it explicitly
 
       # 3 · Install Node *after* pnpm so caching works
